@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bamboo-agent
+  namespace: bamboo  # Ensure this matches your namespace for the Bamboo Server
+spec:
+  replicas: 1  # Adjust the number of replicas as needed
+  selector:
+    matchLabels:
+      app: bamboo-agent
+  template:
+    metadata:
+      labels:
+        app: bamboo-agent
+    spec:
+      containers:
+        - name: bamboo-agent
+          image: atlassian/bamboo-agent-base:latest
+          ports:
+            - containerPort: 32000
+              name: http
+          env:
+            - name: BAMBOO_SERVER
+              value: "http://bamboo:8085/agentServer/" 
+              # Updated to reference the Bamboo Server service
+          volumeMounts:
+            - name: bamboo-data
+              mountPath: /var/atlassian/application-data/agent
+            - name: docker-socket
+              mountPath: /var/run/docker.sock
+          securityContext:
+            privileged: true
+      volumes:
+        - name: bamboo-data
+          persistentVolumeClaim:
+            claimName: bamboo-shared-home
+        - name: docker-socket
+          hostPath:
+            path: /var/run/docker.sock
+            # type: Socket  
+              
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bamboo-agent
+  namespace: bamboo  # Ensure the namespace matches your deployment
+spec:
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      name: web
+      port: 32000
+      targetPort: 32000
+  selector:
+    app: bamboo-agent  # Match the labels in your Bamboo-agent deployment
