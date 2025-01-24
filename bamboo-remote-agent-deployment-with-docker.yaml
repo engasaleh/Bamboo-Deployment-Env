@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bamboo-agent
+  namespace: bamboo  # Replace with your namespace
+  labels:
+    app: bamboo-agent
+spec:
+  replicas: 1  # Adjust the number of replicas as needed
+  selector:
+    matchLabels:
+      app: bamboo-agent
+  template:
+    metadata:
+      labels:
+        app: bamboo-agent
+    spec:
+      containers:
+        - name: bamboo-agent
+          image: abdullahsaleh2001/custom-image:latest  # Use your custom image
+          ports:
+            - containerPort: 54663  # Default Bamboo agent port
+              name: agent-port
+          env:
+            - name: BAMBOO_SERVER
+              value: "http://bamboo:8085"  # Use the Kubernetes service name for the Bamboo server
+          volumeMounts:
+            - name: docker-socket
+              mountPath: /var/run/docker.sock  # Mount the host's Docker socket
+            - name: bamboo-agent-home
+              mountPath: /var/atlassian/application-data/bamboo-agent  # Bamboo agent home directory
+          securityContext:
+            privileged: true  # Required for Docker CLI to work with the host's Docker daemon
+      volumes:
+        - name: docker-socket
+          hostPath:
+            path: /var/run/docker.sock  # Mount the host's Docker socket
+        - name: bamboo-agent-home
+          persistentVolumeClaim:
+            claimName: bamboo-shared-home  # Replace with your PVC name
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bamboo-agent
+  namespace: bamboo  # Replace with your namespace
+spec:
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 54663  # Default Bamboo agent port
+      targetPort: 54663
+  selector:
+    app: bamboo-agent
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bamboo-agent-pvc
+  namespace: bamboo  # Replace with your namespace
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi  # Adjust the storage size as needed
