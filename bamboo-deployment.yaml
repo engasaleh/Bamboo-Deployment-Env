@@ -39,7 +39,6 @@ spec:
         - name: bamboo-shared-home
           persistentVolumeClaim:
             claimName: bamboo-shared-home
-# Kamel Service YAML File
 ---
 apiVersion: v1
 kind: Service
